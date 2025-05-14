@@ -16,21 +16,6 @@ class HomePage extends StatelessWidget {
     final cardColor = isDark ? Colors.grey[900] : Colors.white;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PhishDetective'),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications clicked')),
-              );
-            },
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
