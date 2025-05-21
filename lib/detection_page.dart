@@ -1,4 +1,9 @@
+import 'dart:async'; // Added import for StreamSubscription
+
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart'; // Added import for Hive
+import 'package:phish_detective/sms_model.dart'; // Added import for SmsModel
+import 'package:another_telephony/telephony.dart'; // Changed import to another_telephony
 
 class DetectionPage extends StatefulWidget {
   const DetectionPage({super.key});
@@ -9,12 +14,60 @@ class DetectionPage extends StatefulWidget {
 
 class _ScanPageState extends State<DetectionPage> {
   bool _isScanning = false;
+  final Telephony telephony = Telephony.instance;
+  late Box<SmsModel> smsBox;
+
+  @override
+  void initState() {
+    super.initState();
+    smsBox = Hive.box<SmsModel>('smsBox');
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    final bool? permissionsGranted = await telephony.requestSmsPermissions;
+    if (permissionsGranted == null || !permissionsGranted) {
+      print("SMS Permissions not granted");
+      // Optionally, show a dialog to the user or disable functionality
+    }
+  }
 
   void _toggleScan() {
     setState(() {
       _isScanning = !_isScanning;
-      // Add your actual scan start/stop logic here
+      if (_isScanning) {
+        _startListeningSms();
+      } else {
+        print("SMS listening stopping (managed by plugin/OS or on dispose).");
+      }
     });
+  }
+
+  void _startListeningSms() {
+    telephony.listenIncomingSms(
+      onNewMessage: (SmsMessage message) {
+        print("New SMS from ${message.address}: ${message.body}");
+        final sms = SmsModel(
+          sender: message.address,
+          body: message.body,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(
+            message.date ?? DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        smsBox.add(sms);
+        // Add your phishing detection logic here
+      },
+      listenInBackground: false, // Keep false for now to simplify lifecycle
+    );
+    print("SMS listening started with another_telephony.");
+  }
+
+  @override
+  void dispose() {
+    print(
+      "DetectionPage disposed. SMS listening might stop if plugin handles it.",
+    );
+    super.dispose();
   }
 
   @override
@@ -28,7 +81,6 @@ class _ScanPageState extends State<DetectionPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Status indicator
             Container(
               width: 120,
               height: 120,
@@ -64,7 +116,6 @@ class _ScanPageState extends State<DetectionPage> {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-            // Toggle button
             SizedBox(
               width: 200,
               child: ElevatedButton(
