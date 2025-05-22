@@ -1,5 +1,6 @@
 //history_page.dart
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'db_helper.dart';
 
 class HistoryItem {
@@ -44,8 +45,20 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   @override
+=======
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:phish_detective/sms_model.dart';
+
+class HistoryPage extends StatelessWidget {
+  const HistoryPage({super.key});
+
+  @override
+>>>>>>> a036c8c8002b42703c7d6f9092bf6ab0ed2e2593
   Widget build(BuildContext context) {
+    final smsBox = Hive.box<SmsModel>('smsBox');
+
     return Scaffold(
+<<<<<<< HEAD
       appBar: AppBar(
         title: const Text('Scan History'),
         centerTitle: true,
@@ -156,6 +169,29 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             ],
           ),
+=======
+      appBar: AppBar(title: const Text('SMS History')),
+      body: ValueListenableBuilder(
+        valueListenable: smsBox.listenable(),
+        builder: (context, Box<SmsModel> box, _) {
+          if (box.values.isEmpty) {
+            return const Center(child: Text('No SMS messages yet.'));
+          }
+          return ListView.builder(
+            itemCount: box.values.length,
+            itemBuilder: (context, index) {
+              final sms = box.getAt(index) as SmsModel;
+              return ListTile(
+                title: Text(sms.sender ?? 'Unknown Sender'),
+                subtitle: Text(sms.body ?? 'No content'),
+                trailing: Text(sms.timestamp?.toString() ?? 'No date'),
+                // You can add an icon or color based on sms.isPhishing
+              );
+            },
+          );
+        },
+      ),
+>>>>>>> a036c8c8002b42703c7d6f9092bf6ab0ed2e2593
     );
   }
 }

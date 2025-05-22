@@ -1,7 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+<<<<<<< HEAD
     <uses-permission android:name="android.permission.SEND_SMS" />
+=======
+>>>>>>> a036c8c8002b42703c7d6f9092bf6ab0ed2e2593
     <application
         android:label="phish_detective"
         android:name="${applicationName}"
