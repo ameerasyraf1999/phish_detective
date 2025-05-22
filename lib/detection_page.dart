@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'sms_scanner.dart';
 
 class DetectionPage extends StatefulWidget {
   const DetectionPage({super.key});
@@ -9,12 +10,23 @@ class DetectionPage extends StatefulWidget {
 
 class _ScanPageState extends State<DetectionPage> {
   bool _isScanning = false;
+  final SmsScanner _scanner = SmsScanner();
 
-  void _toggleScan() {
+  void _toggleScan() async {
     setState(() {
       _isScanning = !_isScanning;
-      // Add your actual scan start/stop logic here
     });
+    if (_isScanning) {
+      await _scanner.scanAndStoreAllSms();
+      setState(() {
+        _isScanning = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('SMS scan complete!')));
+      }
+    }
   }
 
   @override

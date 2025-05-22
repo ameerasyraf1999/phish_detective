@@ -1,12 +1,13 @@
 //history_page.dart
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 class HistoryItem {
-  final String url;
+  final String body;
   final DateTime date;
   final bool isSafe;
 
-  HistoryItem(this.url, this.date, this.isSafe);
+  HistoryItem(this.body, this.date, this.isSafe);
 }
 
 class HistoryPage extends StatefulWidget {
@@ -17,11 +18,30 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final List<HistoryItem> _historyItems = [
-    HistoryItem('https://example.com', DateTime.now().subtract(const Duration(days: 1)), true),
-    HistoryItem('https://phishing-site.com', DateTime.now().subtract(const Duration(days: 2)), false),
-    HistoryItem('https://trusted-site.org', DateTime.now().subtract(const Duration(days: 3)), true),
-  ];
+  List<HistoryItem> _historyItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final db = DBHelper();
+    final data = await db.getHistory();
+    setState(() {
+      _historyItems =
+          data
+              .map(
+                (e) => HistoryItem(
+                  e['body'] ?? '',
+                  DateTime.fromMillisecondsSinceEpoch(e['date'] ?? 0),
+                  (e['isSafe'] ?? 1) == 1,
+                ),
+              )
+              .toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,95 +56,106 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ],
       ),
-      body: _historyItems.isEmpty
-          ? const Center(child: Text('No scan history yet'))
-          : ListView.builder(
-              itemCount: _historyItems.length,
-              itemBuilder: (context, index) {
-                final item = _historyItems[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  child: ListTile(
-                    leading: Icon(
-                      item.isSafe ? Icons.check_circle : Icons.warning,
-                      color: item.isSafe ? Colors.green : Colors.orange,
+      body:
+          _historyItems.isEmpty
+              ? const Center(child: Text('No scan history yet'))
+              : ListView.builder(
+                itemCount: _historyItems.length,
+                itemBuilder: (context, index) {
+                  final item = _historyItems[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                    title: Text(
-                      item.url,
-                      style: TextStyle(
-                        decoration: item.isSafe ? null : TextDecoration.lineThrough,
+                    child: ListTile(
+                      leading: Icon(
+                        item.isSafe ? Icons.check_circle : Icons.warning,
+                        color: item.isSafe ? Colors.green : Colors.orange,
                       ),
+                      title: Text(
+                        item.body,
+                        style: TextStyle(
+                          decoration:
+                              item.isSafe ? null : TextDecoration.lineThrough,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Scanned on ${item.date.toString().split(' ')[0]}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showDetails(context, item),
                     ),
-                    subtitle: Text(
-                      'Scanned on ${item.date.toString().split(' ')[0]}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showDetails(context, item),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
     );
   }
 
   void _showDetails(BuildContext context, HistoryItem item) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(item.isSafe ? 'Safe URL' : 'Phishing Detected'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('URL: ${item.url}'),
-            const SizedBox(height: 10),
-            Text('Date: ${item.date.toString()}'),
-            const SizedBox(height: 20),
-            Text(
-              item.isSafe
-                  ? 'This URL has been verified as safe'
-                  : 'Warning: Potential phishing site detected',
-              style: TextStyle(
-                color: item.isSafe ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+      builder:
+          (context) => AlertDialog(
+            title: Text(item.isSafe ? 'Safe SMS' : 'Phishing Detected'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Message: ${item.body}'),
+                const SizedBox(height: 10),
+                Text('Date: ${item.date.toString()}'),
+                const SizedBox(height: 20),
+                Text(
+                  item.isSafe
+                      ? 'This SMS has been verified as safe'
+                      : 'Warning: Potential phishing SMS detected',
+                  style: TextStyle(
+                    color: item.isSafe ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   void _showClearConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear History?'),
-        content: const Text('This will permanently delete all scan history.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Clear History?'),
+            content: const Text(
+              'This will permanently delete all scan history.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final db = DBHelper();
+                  await db.clearHistory();
+                  setState(() => _historyItems.clear());
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('History cleared')),
+                  );
+                },
+                child: const Text('Clear', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              setState(() => _historyItems.clear());
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('History cleared')),
-              );
-            },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 }
